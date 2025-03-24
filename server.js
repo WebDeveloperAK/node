@@ -149,16 +149,17 @@ app.post("/upload", authenticateToken, upload.single("video"), (req, res) => {
     );
 });
 
+
+
 app.get("/video/:id", (req, res) => {
     const videoId = req.params.id;
 
-    db.query("SELECT title, video FROM videos WHERE id = ?", [videoId], (err, results) => {
+    db.query("SELECT video FROM videos WHERE id = ?", [videoId], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length === 0) return res.status(404).json({ error: "Video not found" });
 
-        const { title, video } = results[0];
-
-        res.json({ title, video }); // Return title and video path as JSON
+        const videoPath = results[0].video;
+        res.sendFile(path.resolve(videoPath)); // Serve the file
     });
 });
 
