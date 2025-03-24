@@ -5,9 +5,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require('cors');
 
-app.use(cors());
+
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // 🛠 Database Connection
