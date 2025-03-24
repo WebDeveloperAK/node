@@ -101,6 +101,63 @@ app.get("/dashboard", authenticateToken, (req, res) => {
     });
 });
 
+const multer = require("multer");
+const path = require("path");
+
+// Set Storage Engine
+const storage = multer.diskStorage({
+    destination: "./uploads/videos",
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname)); // Unique file name
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+    fileFilter: (req, file, cb) => {
+        const fileTypes = /mp4|mkv|avi/;
+        const mimetype = fileTypes.test(file.mimetype);
+        if (mimetype) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only video files are allowed!"));
+        }
+    },
+});
+
+// API to Upload Video (Stores File Path in DB)
+app.post("/upload", authenticateToken, upload.single("video"), (req, res) => {
+    const { title, description } = req.body;
+    const videoPath = req.file?.path; // Get video file path
+
+    if (!title || !description || !videoPath) {
+        return res.status(400).json({ error: "All fields are required" });
+    }
+
+    db.query(
+        "INSERT INTO videos (title, description, video, user_id) VALUES (?, ?, ?, ?)",
+        [title, description, videoPath, req.user.id],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "Video uploaded successfully!", videoPath });
+        }
+    );
+});
+
+app.get("/video/:id", (req, res) => {
+    const videoId = req.params.id;
+
+    db.query("SELECT video FROM videos WHERE id = ?", [videoId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: "Video not found" });
+
+        const videoPath = results[0].video;
+        res.sendFile(path.resolve(videoPath)); // Serve the file
+    });
+});
+
+
 // 🛠 Server Listen
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
