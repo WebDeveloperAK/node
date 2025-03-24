@@ -162,6 +162,14 @@ app.get("/video/:id", (req, res) => {
     });
 });
 
+app.get("/videos", (req, res) => {
+    db.query("SELECT id, title, video FROM videos", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        res.json(results); // Return all videos as JSON
+    });
+});
+
 
 // 🛠 Server Listen
 const PORT = process.env.PORT || 5000;
