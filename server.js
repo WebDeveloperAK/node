@@ -25,8 +25,8 @@ db.connect((err) => {
 
 // 🛠 User Registration API
 app.post("/register", async (req, res) => {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -38,8 +38,8 @@ app.post("/register", async (req, res) => {
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
-        const sql = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
-        db.query(sql, [name, email, hashedPassword, role], (err, result) => {
+        const sql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
+        db.query(sql, [name, email, hashedPassword], (err, result) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
             }
@@ -66,8 +66,8 @@ app.post("/login", (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Generate JWT Token
-        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        // Generate JWT Token (without role)
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
         // Update last login
         db.query("UPDATE users SET last_login_at = NOW(), ip_address = ? WHERE id = ?", [req.ip, user.id]);
@@ -90,7 +90,15 @@ const authenticateToken = (req, res, next) => {
 };
 
 app.get("/dashboard", authenticateToken, (req, res) => {
-    res.json({ message: "Welcome to the dashboard", user: req.user });
+    db.query("SELECT id, name, email FROM users WHERE id = ?", [req.user.id], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        res.json({ message: "Welcome to the dashboard", user: results[0] });
+    });
 });
 
 // 🛠 Server Listen
