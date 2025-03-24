@@ -129,7 +129,7 @@ const upload = multer({
 // API to Upload Video (Stores File Path in DB)
 app.post("/upload", authenticateToken, upload.single("video"), (req, res) => {
     const { title, description } = req.body;
-    const videoPath = req.file?.path; // Get video file path
+    const videoPath = req.file?.path.replace(/\\/g, "/");
 
     if (!title || !description || !videoPath) {
         return res.status(400).json({ error: "All fields are required" });
